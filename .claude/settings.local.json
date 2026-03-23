@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//project/6101844/**)",
+      "Read(//home/mattli/**)",
+      "Read(//model-weights/**)",
+      "Bash(sinfo)",
+      "Bash(sacctmgr show:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(chmod:*)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(pip show:*)",
+      "Bash(pip list:*)",
+      "Bash(grep -r 'class MDLMSamplerConfig' /project/6101844/mattli/syn-dial-project --include=*.py -l)",
+      "Bash(find /project/6101844/mattli/syn-dial-project -name *.py -path */dllm/*)",
+      "Bash(python3 -c \"import dllm; import inspect; print\\(inspect.getfile\\(dllm\\)\\)\")",
+      "Bash(find /project/6101844/mattli/dllm/scripts/tests -name *.py)"
+    ]
+  }
+}
