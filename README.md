@@ -2,6 +2,8 @@
 
 This repo is for my synthetic dialogue project.
 
+Need to move downloaded files from user storage ($HOME) to project ($PROJECT)
+
 ## Approach
 - Need to test at least 3 different models (2 AR and 2 Diffusion?), they should be similar sizes (8B)
 - Models
@@ -30,7 +32,7 @@ For the AR models, used the predownloaded weights that are shared on the cluster
 ~/../../model-weights/Qwen2.5-0.5B-Instruct
 ```
 
-For the Diffusion Models use git LFS to download the model weights from HF.
+For the Diffusion Models use git LFS to download the model weights from HF. (Don't use LLaDA-8B, use LLaDA 2.1)
 ```
 /home/mattli/.cache/huggingface/hub/models--GSAI-ML--LLaDA-8B-Instruct/snapshots/08b83a6feb34df1a6011b80c3c00c7563e963b07
 
