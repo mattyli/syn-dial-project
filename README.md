@@ -23,7 +23,7 @@ Need to move downloaded files from user storage ($HOME) to project ($PROJECT)
 - Models to use:
     1. https://huggingface.co/inclusionAI/LLaDA2.1-mini
     2. https://huggingface.co/Dream-org/Dream-v0-Instruct-7B
-
+    3. https://huggingface.co/tencent/WeDLM-7B-Instruct
 ## Logistics
 ### Weights Path
 Use instruct models
