@@ -1,6 +1,6 @@
 # syn-dial-project
 
-This repo is for my synthetic dialogue project.
+This repo is for my synthetic dialogue project for ELEC 825. THis will primarily focus on diffusion models.
 
 Need to move downloaded files from user storage ($HOME) to project ($PROJECT)
 
@@ -39,29 +39,12 @@ For the Diffusion Models use git LFS to download the model weights from HF. (Don
 
 ```
 
-### Running Inference
-
-Input must be a JSONL file where each line has a `"prompt"` key, e.g.:
-```json
-{"prompt": "Generate a short customer service dialogue about a lost package."}
-```
-
-### Submit to Slurm
-
-```bash
-sbatch --export=ALL,INPUT=data/prompts.jsonl,OUTPUT=data/responses.jsonl run_inference.sh
-```
-
-Override `INPUT`/`OUTPUT` as needed. Logs are written to `logs/`.
-
-### Run interactively
-
-```bash
-python3 run_inference.py --input data/prompts.jsonl --output data/responses.jsonl
-```
-
 ### Running Inference With DLLM
 
 ```
 python3 -u sample.py --model_name_or_path "/home/mattli/.cache/huggingface/hub/models--GSAI-ML--LLaDA-8B-Instruct/snapshots/08b83a6feb34df1a6011b80c3c00c7563e963b07"
 ```
+
+## Experiment Setup
+### 1. Straight Prompting
+
