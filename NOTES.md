@@ -11,6 +11,8 @@ In the call center space, recent research has suggested that most prominent synt
     - this would be more of a comprehensive study?
 - *Can diffusion models finetuned on MedSynth, outperform AR models that have also been finetuned?*
 - How do diffusion, AR, and hybrid (AR + Diffusion) models stack up against eachother?
+- How do the different diffusion paradigms stack up to eachother? BDLM vs. MDLM?
+    - Generate dialogues from the MedSynth notes set (Note-2-Dial) and then benchmark the quality based on ACI-bench?
 
 ## Relevant Papers
 - [DiaSynth](https://arxiv.org/pdf/2409.19020)
