@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+# Script that runs inference for AR models on the train/valid + test1 sets of ACI bench
+
 # Allowed models
 ALLOWED_MODELS=(
   "Meta-Llama-3.1-8B-Instruct"
@@ -32,6 +34,8 @@ esac
 
 LAUNCH_ARGS="$MODEL_NAME"
 
+# --- Directly from https://github.com/VectorInstitute/vector-inference/blob/main/examples/slurm_dependency/run_workflow.sh
+
 # ---- Step 1: Launch the server
 RAW_JSON=$(vec-inf launch "$LAUNCH_ARGS" --json-mode)
 SERVER_JOB_ID=$(echo "$RAW_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin)['slurm_job_id'])")
@@ -39,4 +43,6 @@ echo "Launched server as job $SERVER_JOB_ID"
 echo "$RAW_JSON"
 
 # ---- Step 2: Submit downstream job
-sbatch --dependency=after:$SERVER_JOB_ID --export=SERVER_JOB_ID="$SERVER_JOB_ID" --export=MODEL_NAME=$MODEL_NAME downstream_job.sbatch
+sbatch --dependency=after:$SERVER_JOB_ID \
+  --export=SERVER_JOB_ID="$SERVER_JOB_ID",MODEL_NAME="$MODEL_NAME" \
+  downstream_job.sbatch

@@ -20,6 +20,13 @@ In the call center space, recent research has suggested that most prominent synt
 - Doc2Dial
 - [BluePrint](https://arxiv.org/pdf/2510.02343)
 - [PersonaHub](https://huggingface.co/datasets/proj-persona/PersonaHub)
+- [PatientSim](https://arxiv.org/pdf/2505.17818)
+    - They incorporate personas into generation using four axes including *personality, language proficiency, medical history recall level, cognitive confusion level.*
+    - Personality - [impatient, overanxious, distrustful, overly positive, verbose, neutral]
+    - Language Profieciency (use CEFR)
+    - Medical History Recall - how well patient can recall details of their medical history.
+    - Cognitive Confusion Level - induces a degree of coherence/ incoherence in the dialogue.
+
 
 ## Prompt Engineering/ Optimization
 - Prompting is a form of training free alignment (getting the model to do what the human wants).
