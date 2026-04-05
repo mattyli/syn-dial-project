@@ -21,7 +21,7 @@ case "$MODEL_NAME" in
   |"Mistral-7B-Instruct-v0.3" \
   |"Qwen2.5-7B-Instruct"\
   |"gpt-oss-20b"\
-  |"Qwen3-8B"
+  |"Qwen3-8B"\
 	)
     ;;
   *)
@@ -34,15 +34,24 @@ esac
 
 LAUNCH_ARGS="$MODEL_NAME"
 
+# export the environment variables required
+
 # --- Directly from https://github.com/VectorInstitute/vector-inference/blob/main/examples/slurm_dependency/run_workflow.sh
 
+SCRIPT_DIR="/project/aip-zhu2048/mattli/syn-dial-project"
+mkdir -p "$SCRIPT_DIR/autoregressive_models/results"
+
 # ---- Step 1: Launch the server
-RAW_JSON=$(vec-inf launch "$LAUNCH_ARGS" --json-mode)
+RAW_JSON=$(vec-inf launch "$LAUNCH_ARGS" --work-dir="$SCRIPT_DIR" --json-mode)
 SERVER_JOB_ID=$(echo "$RAW_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin)['slurm_job_id'])")
 echo "Launched server as job $SERVER_JOB_ID"
 echo "$RAW_JSON"
 
 # ---- Step 2: Submit downstream job
-sbatch --dependency=after:$SERVER_JOB_ID \
-  --export=SERVER_JOB_ID="$SERVER_JOB_ID",MODEL_NAME="$MODEL_NAME" \
-  downstream_job.sbatch
+sbatch --chdir="$SCRIPT_DIR/autoregressive_models" \
+	--dependency=after:$SERVER_JOB_ID \
+	--job-name="${MODEL_NAME}-downstream" \
+	--output="/project/6101844/mattli/syn-dial-project/autoregressive_models/results/%x.%j.out" \
+	--error="/project/6101844/mattli/syn-dial-project/autoregressive_models/results/%x.%j.err" \
+  	--export=SERVER_JOB_ID="$SERVER_JOB_ID",MODEL_NAME="$MODEL_NAME" \
+	downstream_job.sbatch

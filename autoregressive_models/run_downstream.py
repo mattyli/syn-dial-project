@@ -20,14 +20,14 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Run downstream ACI-bench inference via a vec-inf server"
     )
-    parser.add_argument("job_id", type=str, help="SLURM job ID of the vec-inf server")
-    parser.add_argument("model_name", type=str, help="Model name served by the vec-inf server")
+    parser.add_argument("--job_id", type=str, help="SLURM job ID of the vec-inf server")
+    parser.add_argument("--model_name", type=str, help="Model name served by the vec-inf server")
     parser.add_argument(
-        "--max_tokens", type=int, default=512,
+        "--max_tokens", type=int, default=4000,
         help="Maximum number of tokens to generate (default: 512)"
     )
     parser.add_argument(
-        "--temperature", type=float, default=0.0,
+        "--temperature", type=float, default=0.1,
         help="Sampling temperature (default: 0.0)"
     )
     parser.add_argument(
@@ -41,6 +41,16 @@ def parse_args():
             "Given a doctor-patient dialogue, generate a structured clinical note."
         ),
         help="System prompt to prepend to every user message"
+    )
+    parser.add_argument(
+        "--data_dir", type=str,
+        default="/project/6101844/mattli/syn-dial-project/aci-bench-main/data/challenge_data_json",
+        help="Directory containing the ACI-bench challenge data JSON files"
+    )
+    parser.add_argument(
+        "--output_dir", type=str,
+        default="/project/6101844/mattli/syn-dial-project/autoregressive_models/results",
+        help="Directory to write inference results (must be on shared filesystem)"
     )
     return parser.parse_args()
 
@@ -57,14 +67,11 @@ print(f"Server ready at {status.base_url}")
 api_client = OpenAI(base_url=status.base_url, api_key="EMPTY")
 
 # --- Load test1 data
-DATA_PATH = pathlib.Path(
-    "/project/6101844/mattli/syn-dial-project/aci-bench-main"
-    "/data/challenge_data_json/clinicalnlp_taskB_test1_full.json"
-)
+DATA_PATH = pathlib.Path(args.data_dir) / "clinicalnlp_taskB_test1_full.json"
 examples = json.loads(DATA_PATH.read_text())["data"]
 print(f"Loaded {len(examples)} examples from {DATA_PATH}")
 
-OUTPUT_PATH = pathlib.Path(__file__).parent / f"results/{args.model_name}_clinicalnlp_taskB_test1_full.jsonl"
+OUTPUT_PATH = pathlib.Path(args.output_dir) / f"{args.model_name}_clinicalnlp_taskB_test1_full.jsonl"
 OUTPUT_PATH.parent.mkdir(exist_ok=True)
 
 with OUTPUT_PATH.open("w") as out_f:

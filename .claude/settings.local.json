@@ -14,7 +14,8 @@
       "Bash(grep -r 'class MDLMSamplerConfig' /project/6101844/mattli/syn-dial-project --include=*.py -l)",
       "Bash(find /project/6101844/mattli/syn-dial-project -name *.py -path */dllm/*)",
       "Bash(python3 -c \"import dllm; import inspect; print\\(inspect.getfile\\(dllm\\)\\)\")",
-      "Bash(find /project/6101844/mattli/dllm/scripts/tests -name *.py)"
+      "Bash(find /project/6101844/mattli/dllm/scripts/tests -name *.py)",
+      "Bash(python3:*)"
     ]
   }
 }
