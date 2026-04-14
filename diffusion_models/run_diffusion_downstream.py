@@ -1,7 +1,7 @@
 """
 Downstream inference script for ACI-bench test1 using LLaDA2.1-mini (diffusion model).
 
-Loads LLaDA2.1-mini directly via the dllm library, runs clinical note generation on
+Loads LLaDA2.1-mini directly via HuggingFace Transformers, runs clinical note generation on
 the 40 examples in clinicalnlp_taskB_test1_full.json, and writes results to
 results/LLaDA2.1-mini_clinicalnlp_taskB_test1_full.jsonl.
 
@@ -15,10 +15,7 @@ import json
 import pathlib
 
 import torch
-
-import dllm
-import dllm.pipelines.llada2
-from dllm.utils import ModelArguments, get_model, get_tokenizer, sample_trim
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 DEFAULT_MODEL_PATH = (
     "/home/mattli/projects/aip-zhu2048/mattli/hf_cache/hub/"
@@ -41,16 +38,12 @@ def parse_args():
         help="Path to LLaDA2.1-mini model snapshot"
     )
     parser.add_argument(
-        "--max_new_tokens", type=int, default=4000,
-        help="Maximum number of tokens to generate (default: 512)"
+        "--max_new_tokens", type=int, default=1024,
+        help="Maximum number of tokens to generate (default: 768; ACI notes max ~785 words ≈ 1000 tokens)"
     )
     parser.add_argument(
         "--block_size", type=int, default=32,
         help="Diffusion block size (default: 32)"
-    )
-    parser.add_argument(
-        "--steps_per_block", type=int, default=32,
-        help="Denoising steps per block (default: 32)"
     )
     parser.add_argument(
         "--temperature", type=float, default=0.1,
@@ -61,7 +54,7 @@ def parse_args():
         help="Nucleus sampling top-p (default: disabled)"
     )
     parser.add_argument(
-        "--threshold", type=float, default=0.95,
+            "--threshold", type=float, default=0.7,
         help="Confidence threshold for token transfer (default: 0.95)"
     )
     parser.add_argument(
@@ -84,20 +77,19 @@ def parse_args():
 def main():
     args = parse_args()
 
-    model_args = ModelArguments(model_name_or_path=args.model_name_or_path)
-
     print("Loading model and tokenizer...")
-    model = get_model(model_args=model_args).eval()
-    tokenizer = get_tokenizer(model_args=model_args)
+    model = AutoModelForCausalLM.from_pretrained(
+        args.model_name_or_path,
+        trust_remote_code=True,
+        torch_dtype=torch.bfloat16,
+        device_map="auto"
+    )
 
-    sampler = dllm.pipelines.llada2.LLaDA2Sampler(model=model, tokenizer=tokenizer)
-    sampler_config = dllm.pipelines.llada2.LLaDA2SamplerConfig(
-        max_new_tokens=args.max_new_tokens,
-        block_size=args.block_size,
-        steps_per_block=args.steps_per_block,
-        temperature=args.temperature,
-        top_p=args.top_p,
-        threshold=args.threshold,
+    print("loaded model from path...")
+    model = model.eval()
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.model_name_or_path,
+        trust_remote_code=True,
     )
 
     data_path = pathlib.Path(args.data_dir) / "clinicalnlp_taskB_test1_full.json"
@@ -118,14 +110,27 @@ def main():
                     messages,
                     add_generation_prompt=True,
                     tokenize=True,
-                )
-                inputs = [input_ids]
+                    return_tensors="pt",
+                ).to(model.device)
                 with torch.no_grad():
-                    outputs = sampler.sample(inputs, sampler_config, return_dict=True)
-                sequences = sample_trim(tokenizer, outputs.sequences.tolist(), inputs)
-                prediction = sequences[0].strip()
+                    generated_tokens = model.generate(
+                        inputs=input_ids,
+                        gen_length=args.max_new_tokens,
+                        block_length=args.block_size,
+                        temperature=args.temperature,
+                        top_p=args.top_p,
+                        threshold=args.threshold,
+                        editing_threshold=0.5,          # quality mode (HF documentation)
+                        max_post_steps=16,
+                        eos_early_stop=True,
+                    )
+                gen_ids = generated_tokens[0][input_ids.shape[1]:]
+                prediction = tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
+                print(prediction)
             except Exception as e:
+                import traceback
                 print(f"  ERROR on example {i} ({ex['file']}): {e}")
+                traceback.print_exc()
                 prediction = ""
 
             out_f.write(json.dumps({
