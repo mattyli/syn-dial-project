@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/project/6101844/mattli/syn-dial-project/autoregressive_models/run_downstream.py", line 63, in <module>
+    status = vi_client.wait_until_ready(slurm_job_id=args.job_id)
+  File "/project/6101844/mattli/syn-dial-project/.venv/lib/python3.10/site-packages/vec_inf/client/api.py", line 352, in wait_until_ready
+    status_info = self.get_status(slurm_job_id)
+  File "/project/6101844/mattli/syn-dial-project/.venv/lib/python3.10/site-packages/vec_inf/client/api.py", line 249, in get_status
+    model_status_monitor = ModelStatusMonitor(slurm_job_id)
+  File "/project/6101844/mattli/syn-dial-project/.venv/lib/python3.10/site-packages/vec_inf/client/_helper.py", line 790, in __init__
+    self.output = self._get_raw_status_output()
+  File "/project/6101844/mattli/syn-dial-project/.venv/lib/python3.10/site-packages/vec_inf/client/_helper.py", line 814, in _get_raw_status_output
+    raise SlurmJobError(f"Error: {stderr}")
+vec_inf.client._exceptions.SlurmJobError: Error: slurm_load_jobs error: Invalid job id specified
+
+slurmstepd: error: *** JOB 3159696 ON kn162 CANCELLED AT 2026-04-14T16:46:53 ***

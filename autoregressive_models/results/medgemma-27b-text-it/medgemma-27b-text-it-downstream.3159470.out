@@ -1,0 +1,44 @@
+Waiting for SLURM job 3159469 to be ready...
+Server ready at http://kn108:31347/v1
+Loaded 40 examples from /tmp/data/clinicalnlp_taskB_test1_full.json
+  [1/40] D2N088-virtassist
+  [2/40] D2N089-virtassist
+  [3/40] D2N090-virtassist
+  [4/40] D2N091-virtassist
+  [5/40] D2N092-virtassist
+  [6/40] D2N093-virtassist
+  [7/40] D2N094-virtassist
+  [8/40] D2N095-virtassist
+  [9/40] D2N096-virtassist
+  [10/40] D2N097-virtassist
+  [11/40] D2N098-virtscribe
+  [12/40] D2N099-virtscribe
+  [13/40] D2N100-virtscribe
+  [14/40] D2N101-virtscribe
+  [15/40] D2N102-virtscribe
+  [16/40] D2N103-virtscribe
+  [17/40] D2N104-virtscribe
+  [18/40] D2N105-virtscribe
+  [19/40] D2N106-aci
+  [20/40] D2N107-aci
+  [21/40] D2N108-aci
+  [22/40] D2N109-aci
+  [23/40] D2N110-aci
+  [24/40] D2N111-aci
+  [25/40] D2N112-aci
+  [26/40] D2N113-aci
+  [27/40] D2N114-aci
+  [28/40] D2N115-aci
+  [29/40] D2N116-aci
+  [30/40] D2N117-aci
+  [31/40] D2N118-aci
+  [32/40] D2N119-aci
+  [33/40] D2N120-aci
+  [34/40] D2N121-aci
+  [35/40] D2N122-aci
+  [36/40] D2N123-aci
+  [37/40] D2N124-aci
+  [38/40] D2N125-aci
+  [39/40] D2N126-aci
+  [40/40] D2N127-aci
+Results written to /project/aip-zhu2048/mattli/syn-dial-project/autoregressive_models/results/medgemma-27b-text-it/medgemma-27b-text-it_clinicalnlp_taskB_test1_full.jsonl

@@ -26,5 +26,5 @@ python3 run_downstream.py --job_id "$SERVER_JOB_ID" --model_name "$MODEL_NAME" \
 
 sleep 30
 
-# free resources (cancel the job)
-scancel --user mattli
+# free resources (cancel only this model's vec-inf server job)
+scancel "$SERVER_JOB_ID"

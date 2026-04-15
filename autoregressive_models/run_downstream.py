@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument("--job_id", type=str, help="SLURM job ID of the vec-inf server")
     parser.add_argument("--model_name", type=str, help="Model name served by the vec-inf server")
     parser.add_argument(
-        "--max_tokens", type=int, default=4000,
+        "--max_tokens", type=int, default=512,
         help="Maximum number of tokens to generate (default: 512)"
     )
     parser.add_argument(
@@ -71,8 +71,8 @@ DATA_PATH = pathlib.Path(args.data_dir) / "clinicalnlp_taskB_test1_full.json"
 examples = json.loads(DATA_PATH.read_text())["data"]
 print(f"Loaded {len(examples)} examples from {DATA_PATH}")
 
-OUTPUT_PATH = pathlib.Path(args.output_dir) / f"{args.model_name}_clinicalnlp_taskB_test1_full.jsonl"
-OUTPUT_PATH.parent.mkdir(exist_ok=True)
+OUTPUT_PATH = pathlib.Path(args.output_dir) / args.model_name / f"{args.model_name}_clinicalnlp_taskB_test1_full.jsonl"
+OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 with OUTPUT_PATH.open("w") as out_f:
     for i, ex in enumerate(examples, 1):
