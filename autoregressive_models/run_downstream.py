@@ -37,8 +37,21 @@ def parse_args():
     parser.add_argument(
         "--system_prompt", type=str,
         default=(
-            "You are a clinical documentation assistant. "
-            "Given a doctor-patient dialogue, generate a structured clinical note."
+            "Assume you are a very experienced physician and you are conducting research. "
+            "The research project is to generate synthetic medical notes from doctor-patient conversations. "
+            "The notes must be in this format:\n"
+            "** 1. Subjective: This section includes the patient's own description of their symptoms and complaints. "
+            "Roll a dice, if the result is odd, break this part down into several sub-parts like "
+            "Chief Complaint (CC), History of Present Illness (HPI), Review of Systems (ROS).\n"
+            "** 2. Objective: This section includes observations and data gathered by the physician, such as vital "
+            "signs, physical examination findings, and test results.\n"
+            "** 3. Assessment: This section includes the physician's evaluation of the patient's condition, including "
+            "a diagnosis or differential diagnosis.\n"
+            "** 4. Plan: This section includes the physician's recommendations for treatment, management, and follow-up.\n\n"
+            "You will be given a scenario containing your role. Your role can be a Family Medicine Physician, a "
+            "General physician, or a specialist with different specialties. Your task is to generate the note based on "
+            "the scenario. The note you generate must be in the format mentioned above. "
+            "Output only the medical note with no preamble, introduction, or closing remarks."
         ),
         help="System prompt to prepend to every user message"
     )

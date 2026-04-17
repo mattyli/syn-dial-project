@@ -1,18 +1,0 @@
-A new version of the following files was downloaded from https://huggingface.co/Dream-org/Dream-v0-Instruct-7B:
-- configuration_dream.py
-. Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
-`torch_dtype` is deprecated! Use `dtype` instead!
-A new version of the following files was downloaded from https://huggingface.co/Dream-org/Dream-v0-Instruct-7B:
-- generation_utils.py
-. Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
-A new version of the following files was downloaded from https://huggingface.co/Dream-org/Dream-v0-Instruct-7B:
-- modeling_dream.py
-- generation_utils.py
-. Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
-Fetching 4 files:   0%|          | 0/4 [00:00<?, ?it/s]Fetching 4 files:  25%|██▌       | 1/4 [01:54<05:44, 114.93s/it]Fetching 4 files: 100%|██████████| 4/4 [01:54<00:00, 28.73s/it] 
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:00<00:01,  1.72it/s]Loading checkpoint shards:  50%|█████     | 2/4 [00:01<00:01,  1.83it/s]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:01<00:00,  1.94it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:01<00:00,  2.80it/s]Loading checkpoint shards: 100%|██████████| 4/4 [00:01<00:00,  2.36it/s]
-The following generation flags are not valid and may be ignored: ['temperature']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
-A new version of the following files was downloaded from https://huggingface.co/Dream-org/Dream-v0-Instruct-7B:
-- tokenization_dream.py
-. Make sure to double-check they do not contain any added malicious code. To avoid downloading new versions of the code file, you can pin a revision.
-slurmstepd: error: *** JOB 3049519 ON kn106 CANCELLED AT 2026-04-10T12:18:11 ***

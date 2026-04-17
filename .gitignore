@@ -1,3 +1,8 @@
 data/
 aci-bench-main/
 .vec-inf-cache/
+*.jsonl
+*.safetensors
+*.err
+*.out
+prismatic-synthesis/g-vendi/data/

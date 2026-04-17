@@ -15,7 +15,16 @@
       "Bash(find /project/6101844/mattli/syn-dial-project -name *.py -path */dllm/*)",
       "Bash(python3 -c \"import dllm; import inspect; print\\(inspect.getfile\\(dllm\\)\\)\")",
       "Bash(find /project/6101844/mattli/dllm/scripts/tests -name *.py)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(/project/6101844/mattli/syn-dial-project/.venv/bin/pip install *)",
+      "Bash(~/projects/aip-zhu2048/mattli/syn-dial-project/.venv/bin/python -m pip install \"trl<1.0\")",
+      "Bash(~/projects/aip-zhu2048/mattli/syn-dial-project/.venv/bin/python -m ensurepip)",
+      "Bash(~/projects/aip-zhu2048/mattli/syn-dial-project/.venv/bin/python *)",
+      "Bash(~/projects/aip-zhu2048/mattli/syn-dial-project/.venv/bin/pip install *)",
+      "Bash(~/projects/aip-zhu2048/mattli/syn-dial-project/.venv/bin/pip3 install *)",
+      "Bash(uv --version)",
+      "Bash(uv pip *)",
+      "Bash(sbatch *)"
     ]
   }
 }

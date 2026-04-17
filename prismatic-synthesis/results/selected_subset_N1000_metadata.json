@@ -1,0 +1,15 @@
+{
+  "proxy_model": "/model-weights/Qwen3-0.6B",
+  "source_dataset": "/project/aip-zhu2048/mattli/syn-dial-project/prismatic-synthesis/g-vendi/data/datasets/medsynth_selection.jsonl",
+  "gradient_dir": "/project/aip-zhu2048/mattli/syn-dial-project/prismatic-synthesis/g-vendi/data/gradient_storage/medsynth_selection--qwen3-0.6b",
+  "total_candidates": 10240,
+  "gradients_loaded": 10240,
+  "subset_size": 1000,
+  "k_clusters": 1024,
+  "clusters_nonempty": 1024,
+  "cluster_size_min": 1,
+  "cluster_size_max": 166,
+  "cluster_size_mean": 10.0,
+  "output_path": "/project/aip-zhu2048/mattli/syn-dial-project/prismatic-synthesis/results/selected_subset_N1000.jsonl",
+  "timestamp": "2026-04-17T21:09:06.040181+00:00"
+}
