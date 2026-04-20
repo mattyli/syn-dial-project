@@ -4,10 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Synthetic dialogue generation project (targeting EMNLP 2026) using AR language models for clinical note generation. The research involves two complementary tasks:
+Synthetic dialogue generation project (targeting EMNLP 2026) focused on **diversity and data selection** within the MedSynth dataset. Diffusion models are no longer in scope — the project is exclusively AR-based.
 
+The core pipeline:
 1. **Note → Dialogue** (generation): Given a MedSynth clinical note, generate a realistic doctor-patient dialogue (few-shot with `MedSynth_huggingface_final.csv`).
-2. **Dialogue → Note** (evaluation): Given a doctor-patient dialogue, generate a SOAP clinical note — benchmarked via **ACI-bench** (`clinicalnlp_taskB_test1_full`).
+2. **Dialogue → Note** (finetuning/evaluation): Finetune an AR model on MedSynth Dialogue→Note pairs, then benchmark on **ACI-bench** (`clinicalnlp_taskB_test1_full`).
+3. **Diversity analysis** (`prismatic-synthesis/`): G-Vendi clustering to study and select diverse subsets of MedSynth.
 
 Models in use:
 - **AR**: Meta-Llama-3.1-8B-Instruct, Qwen2.5-7B-Instruct, etc. — served via `vec-inf` (vLLM)

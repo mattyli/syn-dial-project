@@ -24,7 +24,11 @@
       "Bash(~/projects/aip-zhu2048/mattli/syn-dial-project/.venv/bin/pip3 install *)",
       "Bash(uv --version)",
       "Bash(uv pip *)",
-      "Bash(sbatch *)"
+      "Bash(sbatch *)",
+      "Bash(/project/6101844/mattli/syn-dial-project/.venv/bin/pip list *)",
+      "Bash(python -c ' *)",
+      "Bash(bash run_finetune.sh --job_name medsynth-kmeans-k100-n1000 --data_path /project/aip-zhu2048/mattli/syn-dial-project/prismatic-synthesis/results/selected_subset_N1000_K100.jsonl)",
+      "Bash(bash run_finetune.sh --job_name medsynth-random-n5000 --num_samples 5000)"
     ]
   }
 }
