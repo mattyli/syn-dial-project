@@ -7,3 +7,4 @@ aci-bench-main/
 *.out
 prismatic-synthesis/g-vendi/data/
 */__pycache__/*
+vendor/
