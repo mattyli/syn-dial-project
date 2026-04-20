@@ -6,3 +6,4 @@ aci-bench-main/
 *.err
 *.out
 prismatic-synthesis/g-vendi/data/
+*/__pycache__/*
