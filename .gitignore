@@ -3,8 +3,16 @@ aci-bench-main/
 .vec-inf-cache/
 *.jsonl
 *.safetensors
+*.pt
+*.pth
 *.err
 *.out
 prismatic-synthesis/g-vendi/data/
-*/__pycache__/*
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+unsloth_compiled_cache/
+**/unsloth_compiled_cache/
+*.json
 vendor/

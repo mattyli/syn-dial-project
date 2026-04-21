@@ -13,8 +13,8 @@
 #   SKIP_LLM      - set to 1 to skip LLM jury
 
 #SBATCH -A aip-zhu2048
-#SBATCH --gres=gpu:h100:1
-#SBATCH --mem=120G
+#SBATCH --gres=gpu:l40s:1
+#SBATCH --mem=80G
 #SBATCH --cpus-per-task=16
 #SBATCH --time=4:00:00
 #SBATCH --mail-type=ALL
@@ -25,8 +25,12 @@ set -euo pipefail
 source "$HOME/projects/aip-zhu2048/mattli/syn-dial-project/.venv/bin/activate"
 export HF_HOME="$HOME/projects/aip-zhu2048/mattli/hf_cache"
 
+module load cuda
+# activate venv
+source ../../.venv/bin/activate
+
 # Fix numpy local version tag that breaks unsloth_zoo import on Compute Canada
-pip install --quiet --force-reinstall --no-deps "numpy==1.26.4"
+uv pip install --quiet --force-reinstall --no-deps "numpy==1.26.4"
 
 cd /project/aip-zhu2048/mattli/syn-dial-project/eval/benchmarking
 

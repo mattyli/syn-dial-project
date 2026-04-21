@@ -51,6 +51,7 @@ def load_medsynth(
         df = pd.read_json(data_path, lines=True).rename(columns={"prompt": "Dialogue", "completion": "Note"})
     else:
         df = pd.read_csv(data_path)
+        df.columns = df.columns.str.strip()
 
     df = df.dropna(subset=["Note", "Dialogue"])
     df = df.drop_duplicates(subset=["Note", "Dialogue"])

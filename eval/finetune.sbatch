@@ -1,5 +1,5 @@
 #!/bin/bash
-# Slurm job for QLoRA finetuning on an H100.
+# Slurm job for QLoRA finetuning on an L40s.
 # Do not submit this directly — use run_finetune.sh which sets --output/--error/--job-name
 # and creates the results directory before submission.
 #
@@ -13,8 +13,8 @@
 #   SEED           - random seed
 
 #SBATCH -A aip-zhu2048
-#SBATCH --gres=gpu:h100:1
-#SBATCH --mem=120G
+#SBATCH --gres=gpu:l40s:1
+#SBATCH --mem=64G
 #SBATCH --cpus-per-task=16
 #SBATCH --time=12:00:00
 #SBATCH --mail-type=ALL
@@ -27,6 +27,9 @@ export HF_HOME="$HOME/projects/aip-zhu2048/mattli/hf_cache"
 
 cd /project/aip-zhu2048/mattli/syn-dial-project/eval
 
+# activate the venv
+source ../.venv/bin/activate
+module load cuda
 # Build the argument list; --num_samples is optional
 ARGS=(
     --data_path  "${DATA_PATH:-/project/aip-zhu2048/mattli/syn-dial-project/MedSynth_huggingface_final.csv}"
@@ -43,7 +46,7 @@ fi
 
 # Compute Canada installs numpy with a local version tag (+computecanada) that causes
 # unsloth_zoo to detect a version mismatch at import time. Reinstall to strip the tag.
-pip install --quiet --force-reinstall --no-deps "numpy==1.26.4"
+uv pip install --quiet --force-reinstall --no-deps "numpy==1.26.4"
 
 echo "=== finetune job start: $(date) ==="
 echo "=== SLURM_JOB_ID: $SLURM_JOB_ID ==="

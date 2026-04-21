@@ -17,6 +17,7 @@
 
 module load cuda
 
+unset PYTHONPATH
 source "$HOME/projects/aip-zhu2048/mattli/syn-dial-project/.venv/bin/activate"
 export HF_HOME="$HOME/projects/aip-zhu2048/mattli/hf_cache"
 

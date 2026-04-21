@@ -19,7 +19,7 @@ DEFAULT_BASE_MODEL = "unsloth/Meta-Llama-3.1-8B-Instruct"
 
 TUNING_CONFIG = {
     "model_config": {
-        "max_seq_length": 8192,
+        "max_seq_length": 5120,
         "dtype": torch.bfloat16,
         "load_in_4bit": True,
     },
@@ -51,7 +51,7 @@ TUNING_CONFIG = {
         "lr_scheduler_type": "linear",
         "seed": 42,
         "dataset_text_field": "prompt",
-        "max_length": 8192,   # renamed from max_seq_length in trl >= 0.10
+        "max_length": 5120,   # renamed from max_seq_length in trl >= 0.10
         "dataset_num_proc": 2,
         "packing": False,
     },
