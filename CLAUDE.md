@@ -78,6 +78,24 @@ bash run_pipeline.sh  # See script for gradient collection + select_diverse_subs
 # Output: results/selected_subset_N{N}_K{k}.jsonl + _metadata.json + cluster_plot.png
 ```
 
+## MedSynth Token Length Distribution
+
+Measured on the full dataset (10,033 examples) using the Llama-3.1-8B tokenizer, with the full chat-template-formatted prompt+completion (`eval/analyze_seq_lengths.py`):
+
+| Statistic | Tokens |
+|-----------|--------|
+| Min       | 1,063  |
+| p50       | 1,815  |
+| p75       | 1,969  |
+| p90       | 2,120  |
+| p95       | 2,208  |
+| p99       | 2,375  |
+| Max       | 4,816  |
+| Mean      | 1,825  |
+| Std dev   | 227    |
+
+Zero examples exceed 8,192 tokens. The current `max_seq_length=5120` has ~25% headroom over the actual max; **dropping to 2048–2500 would cover ≥95% of examples** with a meaningful training speedup.
+
 ## Architecture
 
 ### Data flow
