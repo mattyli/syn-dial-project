@@ -16,7 +16,7 @@
 #SBATCH --gres=gpu:l40s:1
 #SBATCH --mem=64G
 #SBATCH --cpus-per-task=16
-#SBATCH --time=12:00:00
+#SBATCH --time=24:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=matthew.li@queensu.ca
 
@@ -46,7 +46,7 @@ fi
 
 # Compute Canada installs numpy with a local version tag (+computecanada) that causes
 # unsloth_zoo to detect a version mismatch at import time. Reinstall to strip the tag.
-uv pip install --quiet --force-reinstall --no-deps "numpy==1.26.4"
+# uv pip install --quiet --force-reinstall --no-deps "numpy==1.26.4"
 
 echo "=== finetune job start: $(date) ==="
 echo "=== SLURM_JOB_ID: $SLURM_JOB_ID ==="

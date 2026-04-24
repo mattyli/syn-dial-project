@@ -135,11 +135,18 @@ def run_inference(
     )
     FastLanguageModel.for_inference(model)
 
+    # Gemma3 loads a Processor (has image_processor); Llama/Qwen load a plain Tokenizer.
+    # Processors require content as [{"type": "text", "text": "..."}]; plain tokenizers want a string.
+    use_typed_content = hasattr(tokenizer, "image_processor")
+
     predictions: list[str] = []
     for i, ex in enumerate(examples):
+        user_text = f"This is the conversation: {ex['src']}"
+        sys_content  = [{"type": "text", "text": DIAL2NOTE_SYSTEM_PROMPT}] if use_typed_content else DIAL2NOTE_SYSTEM_PROMPT
+        user_content = [{"type": "text", "text": user_text}]               if use_typed_content else user_text
         messages = [
-            {"role": "system", "content": DIAL2NOTE_SYSTEM_PROMPT},
-            {"role": "user", "content": f"This is the conversation: {ex['src']}"},
+            {"role": "system", "content": sys_content},
+            {"role": "user",   "content": user_content},
         ]
         inputs = tokenizer.apply_chat_template(
             messages,
@@ -214,7 +221,8 @@ def _load_prometheus_judge(mode: str, judge_type: str):
     if judge_type == "gpt":
         model = AsyncLiteLLM("gpt-4o", requests_per_minute=1)
     else:
-        model = VLLM(model=PROMETHEUS_MODEL_PATH)
+        n_gpus = torch.cuda.device_count()
+        model = VLLM(model=PROMETHEUS_MODEL_PATH, gpu_memory_utilization=0.85, tensor_parallel_size=n_gpus)
     kwargs = {}
     if mode == "absolute":
         kwargs["absolute_grade_template"] = ABSOLUTE_PROMPT

@@ -30,7 +30,7 @@ module load cuda
 source ../../.venv/bin/activate
 
 # Fix numpy local version tag that breaks unsloth_zoo import on Compute Canada
-uv pip install --quiet --force-reinstall --no-deps "numpy==1.26.4"
+#uv pip install --quiet --force-reinstall --no-deps "numpy==1.26.4"
 
 cd /project/aip-zhu2048/mattli/syn-dial-project/eval/benchmarking
 

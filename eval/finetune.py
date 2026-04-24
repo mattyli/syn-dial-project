@@ -72,12 +72,8 @@ def main() -> None:
     cfg["training_config"]["num_train_epochs"] = args.epochs
     cfg["training_config"]["seed"] = args.seed
 
-    # ── 1. Dataset ────────────────────────────────────────────────────────────
-    print(f"Loading dataset from {args.data_path} (num_samples={args.num_samples}) ...")
-    dataset = load_medsynth(args.data_path, num_samples=args.num_samples, seed=args.seed)
-    print(f"  {len(dataset)} training examples")
-
-    # ── 2. Model + tokenizer ──────────────────────────────────────────────────
+    # ── 1. Model + tokenizer ──────────────────────────────────────────────────
+    # Load first so tokenizer.apply_chat_template() can format training data correctly.
     print(f"Loading base model: {args.base_model} ...")
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=args.base_model,
@@ -85,6 +81,11 @@ def main() -> None:
         dtype=cfg["model_config"]["dtype"],
         load_in_4bit=cfg["model_config"]["load_in_4bit"],
     )
+
+    # ── 2. Dataset ────────────────────────────────────────────────────────────
+    print(f"Loading dataset from {args.data_path} (num_samples={args.num_samples}) ...")
+    dataset = load_medsynth(args.data_path, num_samples=args.num_samples, seed=args.seed, tokenizer=tokenizer)
+    print(f"  {len(dataset)} training examples")
 
     # ── 3. LoRA / PEFT ───────────────────────────────────────────────────────
     lora = cfg["lora_config"]

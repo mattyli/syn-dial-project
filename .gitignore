@@ -1,10 +1,15 @@
 data/
 aci-bench-main/
+eval/results/
+eval/benchmarking/results/
 .vec-inf-cache/
 *.jsonl
 *.safetensors
 *.pt
 *.pth
+*.bin
+*.jinja
+tokenizer.model
 *.err
 *.out
 prismatic-synthesis/g-vendi/data/
