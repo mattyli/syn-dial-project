@@ -7,7 +7,10 @@
 # Options:
 #   --run_name NAME     eval/results/<NAME>/model/final_model/ (required)
 #   --run_name_b NAME   second run for pairwise relative jury
-#   --judge TYPE        prometheus or gpt (default: prometheus)
+#   --judge TYPE        prometheus | gemma4_26b | qwen35_27b (default: prometheus)
+#                       gemma4_26b = gemma-4-26B-A4B-it via vec-inf
+#                       qwen35_27b = Qwen3.5-27B via vec-inf
+#                       Run all three, then use compute_majority_vote.py to aggregate
 #   --skip_auto         skip traditional metrics
 #   --skip_llm          skip LLM jury
 #

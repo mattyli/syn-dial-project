@@ -67,7 +67,10 @@
       "Bash(bash run_benchmarking.sh --run_name finetune-diverse-k100-n5000-llama32-3b-3ep)",
       "Bash(bash run_benchmarking.sh --run_name finetune-diverse-k100-n5000-qwen25-3b-3ep)",
       "Bash(sinfo --format=\"%P %G %m\")",
-      "Bash(scancel 3279601 *)"
+      "Bash(scancel 3279601 *)",
+      "Bash(xargs ls *)",
+      "Bash(xargs -I{} ls /project/6101844/mattli/syn-dial-project/eval/benchmarking/results/{}/)",
+      "Bash(git *)"
     ]
   }
 }

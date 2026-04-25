@@ -4,8 +4,15 @@ Benchmarking pipeline for finetuned Dialogue→Note models on ACI-bench test set
 Loads a LoRA-finetuned model from eval/results/<run-name>/model/final_model/,
 runs inference on the 40-example ACI-bench test set, then computes:
   - Traditional metrics: BLEU, ROUGE-1/2/L/LSum, BERTScore, METEOR
-  - LLM jury (Prometheus): absolute per-aspect scoring (1–5) and optional
-    pairwise relative preference between two runs
+  - LLM jury: absolute per-aspect scoring (1–5) and optional pairwise relative
+    preference between two runs.
+
+Supported judges (--judge):
+  prometheus   Prometheus 7B v2.0, in-process vLLM (default)
+  gemma4_26b   gemma-4-26B-A4B-it, in-process vLLM (requires 2 GPUs)
+  qwen35_27b   Qwen3.5-27B, in-process vLLM (requires 2 GPUs)
+
+After running all three judges, use compute_majority_vote.py to aggregate.
 
 Uses vendor/MedSynth/eval/utils/ directly (added to sys.path).
 
@@ -18,8 +25,10 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import pathlib
+import re
 import sys
 
 import torch
@@ -50,6 +59,11 @@ DEFAULT_DATA_PATH = (
 )
 DEFAULT_RESULTS_DIR = SCRIPT_DIR / "results"
 
+LARGE_JUDGE_MODEL_PATHS = {
+    "gemma4_26b": "/model-weights/gemma-4-26B-A4B-it",
+    "qwen35_27b": "/model-weights/Qwen3.5-27B",
+}
+
 DIAL2NOTE_SYSTEM_PROMPT = (
     "You are an assistant for medical professionals, specializing in summarizing their "
     "conversations with patients. Your role is to accurately and comprehensively summarize "
@@ -73,8 +87,18 @@ def parse_args() -> argparse.Namespace:
                    help="Second run name for pairwise relative jury")
     p.add_argument("--model-path-b", default=None,
                    help="Explicit path for second model (overrides --run-name-b lookup)")
-    p.add_argument("--judge", choices=["prometheus", "gpt"], default="prometheus",
-                   help="LLM judge backend (gpt requires OPENAI_API_KEY)")
+    p.add_argument(
+        "--judge",
+        choices=["prometheus", "gemma4_26b", "qwen35_27b"],
+        default="prometheus",
+        help=(
+            "LLM judge backend. "
+            "'prometheus' = Prometheus 7B v2.0, in-process vLLM (default). "
+            "'gemma4_26b' = gemma-4-26B-A4B-it, in-process vLLM (requires 2 GPUs). "
+            "'qwen35_27b' = Qwen3.5-27B, in-process vLLM (requires 2 GPUs). "
+            "Run all three, then use compute_majority_vote.py for aggregation."
+        ),
+    )
     p.add_argument("--skip-auto-metrics", action="store_true")
     p.add_argument("--skip-llm-judge", action="store_true")
     p.add_argument("--results-dir", default=str(DEFAULT_RESULTS_DIR),
@@ -168,7 +192,8 @@ def run_inference(
         print(f"  [{i + 1}/{len(examples)}] {ex['file']}")
 
     # free GPU memory before prometheus loads its own vLLM instance
-    del model
+    del model, tokenizer
+    gc.collect()
     torch.cuda.empty_cache()
     return predictions
 
@@ -211,18 +236,189 @@ def compute_auto_metrics(
 
 # ── LLM jury ─────────────────────────────────────────────────────────────────
 
-def _load_prometheus_judge(mode: str, judge_type: str):
-    """Load a PrometheusEval judge using the local snapshot path."""
+def _parse_result_score(text: str) -> int:
+    """Extract integer 1–5 from '[RESULT] X' pattern. Returns -1 on failure."""
+    m = re.search(r'\[RESULT\]\s*([1-5])', text)
+    if m:
+        return int(m.group(1))
+    # Fallback: trailing digit at end of response
+    m = re.search(r'\b([1-5])\b\s*$', text.strip())
+    if m:
+        return int(m.group(1))
+    return -1
+
+
+def _parse_relative_result(text: str) -> str:
+    """Extract 'A' or 'B' from '[RESULT] A/B'. Returns '' on failure."""
+    m = re.search(r'\[RESULT\]\s*([AB])', text, re.IGNORECASE)
+    return m.group(1).upper() if m else ""
+
+
+def _load_large_judge(model_path: str) -> tuple:
+    """Load a large judge model in-process via vLLM. Returns (llm, tokenizer)."""
+    from vllm import LLM, SamplingParams
+    from transformers import AutoTokenizer
+
+    n_gpus = torch.cuda.device_count()
+    print(f"Loading judge from {model_path} (tensor_parallel_size={n_gpus}) ...")
+    # use_fast=False: Gemma fast tokenizer errors when extra_special_tokens is a list not a dict
+    tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
+    llm = LLM(model=model_path, tensor_parallel_size=n_gpus, gpu_memory_utilization=0.85)
+    return llm, tokenizer
+
+
+def run_large_model_absolute_jury(
+    conversations: list[str],
+    references: list[str],
+    predictions: list[str],
+    run_name: str,
+    output_dir: pathlib.Path,
+    judge_type: str,
+) -> None:
+    """Score all aspects using a large model loaded in-process via vLLM."""
+    from vllm import SamplingParams
+    import utils.prometheus as vendor_prometheus
+    from utils import constants as vendor_constants
+    from prometheus_eval.prompts import ABSOLUTE_PROMPT, SCORE_RUBRIC_TEMPLATE, ABS_SYSTEM_PROMPT
+
+    model_path = LARGE_JUDGE_MODEL_PATHS[judge_type]
+    base_name = f"Absolute_{judge_type}_scores"
+    sampling_params = SamplingParams(temperature=0.0, max_tokens=1024)
+
+    llm, tokenizer = _load_large_judge(model_path)
+
+    for aspect, rubric_data in vendor_constants.prometheus_absolute_rubric_data.items():
+        print(f"  [{judge_type}] scoring aspect: {aspect}")
+        rubric = SCORE_RUBRIC_TEMPLATE.format(**rubric_data)
+
+        prompts = []
+        for conv, ref, pred in zip(conversations, references, predictions):
+            instruction = vendor_constants.prometheus_absolute_instruction.format(
+                conversation=conv, gt_note=ref,
+            )
+            prompt = ABSOLUTE_PROMPT.format(
+                instruction=instruction,
+                response=pred,
+                reference_answer=ref,
+                rubric=rubric,
+            )
+            messages = [
+                {"role": "system", "content": ABS_SYSTEM_PROMPT},
+                {"role": "user",   "content": prompt},
+            ]
+            prompts.append(tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True,
+            ))
+
+        outputs = llm.generate(prompts, sampling_params)
+
+        scores: dict[int, dict] = {}
+        for idx, (output, conv, ref, pred) in enumerate(
+            zip(outputs, conversations, references, predictions)
+        ):
+            text = output.outputs[0].text
+            score = _parse_result_score(text)
+            scores[idx] = {
+                "conversation": conv,
+                "reference_note": ref,
+                "model_note": pred,
+                "feedback": text,
+                "Score": score,
+            }
+            print(f"    [{idx + 1}/{len(conversations)}] score={score}")
+
+        vendor_prometheus._save_prometheus_absolute_scores(
+            prometheus_scores=scores,
+            model_A_name=run_name,
+            aspect=aspect,
+            path=str(output_dir),
+            base_name=base_name,
+        )
+
+    del llm
+    torch.cuda.empty_cache()
+    print(f"[{judge_type}] absolute jury complete.")
+
+
+def run_large_model_relative_jury(
+    conversations: list[str],
+    references: list[str],
+    predictions_a: list[str],
+    predictions_b: list[str],
+    run_name_a: str,
+    run_name_b: str,
+    output_dir: pathlib.Path,
+    judge_type: str,
+) -> None:
+    """Pairwise relative scoring using a large model loaded in-process via vLLM."""
+    from vllm import SamplingParams
+    import utils.prometheus as vendor_prometheus
+    from utils import constants as vendor_constants
+    from prometheus_eval.prompts import RELATIVE_PROMPT, SCORE_RUBRIC_TEMPLATE, REL_SYSTEM_PROMPT
+
+    model_path = LARGE_JUDGE_MODEL_PATHS[judge_type]
+    sampling_params = SamplingParams(temperature=0.0, max_tokens=1024)
+
+    llm, tokenizer = _load_large_judge(model_path)
+
+    prompts = []
+    for conv, ref, pred_a, pred_b in zip(conversations, references, predictions_a, predictions_b):
+        instruction = vendor_constants.prometheus_preference_instruction.format(
+            conversation=conv, ground_truth_note=ref,
+        )
+        prompt = RELATIVE_PROMPT.format(
+            instruction=instruction,
+            response_A=pred_a,
+            response_B=pred_b,
+            reference_answer=ref,
+            rubric=vendor_constants.prometheus_preference_rubric,
+        )
+        messages = [
+            {"role": "system", "content": REL_SYSTEM_PROMPT},
+            {"role": "user",   "content": prompt},
+        ]
+        prompts.append(tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True,
+        ))
+
+    outputs = llm.generate(prompts, sampling_params)
+
+    preferences: dict[int, dict] = {}
+    for idx, (output, conv, ref, pred_a, pred_b) in enumerate(
+        zip(outputs, conversations, references, predictions_a, predictions_b)
+    ):
+        text = output.outputs[0].text
+        pref = _parse_relative_result(text)
+        preferences[idx] = {
+            "conversation": conv,
+            "reference_note": ref,
+            "model_A_note": pred_a,
+            "model_B_note": pred_b,
+            "feedback": text,
+            "Preference": pref,
+        }
+        print(f"  [{idx + 1}/{len(conversations)}] preference={pref}")
+
+    vendor_prometheus._save_prometheus_relative_scores(
+        prometheus_scores=preferences,
+        model_A_name=run_name_a,
+        base_name=f"relative_{judge_type}",
+        model_B_name=run_name_b,
+        path=str(output_dir),
+    )
+    del llm
+    torch.cuda.empty_cache()
+    print(f"[{judge_type}] relative jury complete.")
+
+
+def _load_prometheus_judge(mode: str):
+    """Load a PrometheusEval judge using the local Prometheus 7B snapshot."""
     from prometheus_eval import PrometheusEval
     from prometheus_eval.vllm import VLLM
-    from prometheus_eval.litellm import AsyncLiteLLM
     from prometheus_eval.prompts import ABSOLUTE_PROMPT, RELATIVE_PROMPT
 
-    if judge_type == "gpt":
-        model = AsyncLiteLLM("gpt-4o", requests_per_minute=1)
-    else:
-        n_gpus = torch.cuda.device_count()
-        model = VLLM(model=PROMETHEUS_MODEL_PATH, gpu_memory_utilization=0.85, tensor_parallel_size=n_gpus)
+    n_gpus = torch.cuda.device_count()
+    model = VLLM(model=PROMETHEUS_MODEL_PATH, gpu_memory_utilization=0.85, tensor_parallel_size=n_gpus)
     kwargs = {}
     if mode == "absolute":
         kwargs["absolute_grade_template"] = ABSOLUTE_PROMPT
@@ -239,11 +435,22 @@ def run_absolute_jury(
     output_dir: pathlib.Path,
     judge_type: str,
 ) -> None:
+    if judge_type in LARGE_JUDGE_MODEL_PATHS:
+        run_large_model_absolute_jury(
+            conversations=conversations,
+            references=references,
+            predictions=predictions,
+            run_name=run_name,
+            output_dir=output_dir,
+            judge_type=judge_type,
+        )
+        return
+
     import utils.prometheus as vendor_prometheus
     from utils import constants as vendor_constants
 
-    print(f"Loading absolute judge ({judge_type}) from {PROMETHEUS_MODEL_PATH} ...")
-    judge = _load_prometheus_judge("absolute", judge_type)
+    print(f"Loading Prometheus absolute judge from {PROMETHEUS_MODEL_PATH} ...")
+    judge = _load_prometheus_judge("absolute")
 
     for aspect, rubric_data in vendor_constants.prometheus_absolute_rubric_data.items():
         print(f"  Scoring aspect: {aspect}")
@@ -273,26 +480,30 @@ def run_relative_jury(
     output_dir: pathlib.Path,
     judge_type: str,
 ) -> None:
+    if judge_type in LARGE_JUDGE_MODEL_PATHS:
+        run_large_model_relative_jury(
+            conversations=conversations,
+            references=references,
+            predictions_a=predictions_a,
+            predictions_b=predictions_b,
+            run_name_a=run_name_a,
+            run_name_b=run_name_b,
+            output_dir=output_dir,
+            judge_type=judge_type,
+        )
+        return
+
     import utils.prometheus as vendor_prometheus
 
-    print(f"Loading relative judge ({judge_type}) for {run_name_a} vs {run_name_b} ...")
-    judge = _load_prometheus_judge("relative", judge_type)
-    if judge_type == "gpt":
-        scores = vendor_prometheus.get_preference_score_GPT(
-            conversation_list=conversations,
-            reference_list=references,
-            model_A_response_list=predictions_a,
-            model_B_response_list=predictions_b,
-            relative_judge_gpt=judge,
-        )
-    else:
-        scores = vendor_prometheus.get_preference_score(
-            conversation_list=conversations,
-            reference_list=references,
-            model_A_response_list=predictions_a,
-            model_B_response_list=predictions_b,
-            relative_judge_model=judge,
-        )
+    print(f"Loading Prometheus relative judge for {run_name_a} vs {run_name_b} ...")
+    judge = _load_prometheus_judge("relative")
+    scores = vendor_prometheus.get_preference_score(
+        conversation_list=conversations,
+        reference_list=references,
+        model_A_response_list=predictions_a,
+        model_B_response_list=predictions_b,
+        relative_judge_model=judge,
+    )
     vendor_prometheus._save_prometheus_relative_scores(
         prometheus_scores=scores,
         model_A_name=run_name_a,
