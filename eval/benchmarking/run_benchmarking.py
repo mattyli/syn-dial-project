@@ -255,16 +255,37 @@ def _parse_relative_result(text: str) -> str:
 
 
 def _load_large_judge(model_path: str) -> tuple:
-    """Load a large judge model in-process via vLLM. Returns (llm, tokenizer)."""
-    from vllm import LLM, SamplingParams
-    from transformers import AutoTokenizer
+    """Load a large judge model with NF4 bitsandbytes quantization. Returns (model, tokenizer)."""
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
-    n_gpus = torch.cuda.device_count()
-    print(f"Loading judge from {model_path} (tensor_parallel_size={n_gpus}) ...")
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_compute_dtype=torch.bfloat16,
+    )
+    print(f"Loading judge from {model_path} (NF4, double quant, BF16 compute) ...")
     # use_fast=False: Gemma fast tokenizer errors when extra_special_tokens is a list not a dict
     tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
-    llm = LLM(model=model_path, tensor_parallel_size=n_gpus, gpu_memory_utilization=0.85)
-    return llm, tokenizer
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path,
+        quantization_config=bnb_config,
+        device_map="auto",
+        torch_dtype=torch.bfloat16,
+    )
+    model.eval()
+    return model, tokenizer
+
+
+def _generate_judge_response(model, tokenizer, prompt: str, max_new_tokens: int = 1024) -> str:
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    with torch.no_grad():
+        output_ids = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+        )
+    return tokenizer.decode(output_ids[0][inputs.input_ids.shape[-1]:], skip_special_tokens=True)
 
 
 def run_large_model_absolute_jury(
@@ -275,24 +296,22 @@ def run_large_model_absolute_jury(
     output_dir: pathlib.Path,
     judge_type: str,
 ) -> None:
-    """Score all aspects using a large model loaded in-process via vLLM."""
-    from vllm import SamplingParams
+    """Score all aspects using a large model loaded with NF4 bitsandbytes quantization."""
     import utils.prometheus as vendor_prometheus
     from utils import constants as vendor_constants
     from prometheus_eval.prompts import ABSOLUTE_PROMPT, SCORE_RUBRIC_TEMPLATE, ABS_SYSTEM_PROMPT
 
     model_path = LARGE_JUDGE_MODEL_PATHS[judge_type]
     base_name = f"Absolute_{judge_type}_scores"
-    sampling_params = SamplingParams(temperature=0.0, max_tokens=1024)
 
-    llm, tokenizer = _load_large_judge(model_path)
+    model, tokenizer = _load_large_judge(model_path)
 
     for aspect, rubric_data in vendor_constants.prometheus_absolute_rubric_data.items():
         print(f"  [{judge_type}] scoring aspect: {aspect}")
         rubric = SCORE_RUBRIC_TEMPLATE.format(**rubric_data)
 
-        prompts = []
-        for conv, ref, pred in zip(conversations, references, predictions):
+        scores: dict[int, dict] = {}
+        for idx, (conv, ref, pred) in enumerate(zip(conversations, references, predictions)):
             instruction = vendor_constants.prometheus_absolute_instruction.format(
                 conversation=conv, gt_note=ref,
             )
@@ -306,17 +325,10 @@ def run_large_model_absolute_jury(
                 {"role": "system", "content": ABS_SYSTEM_PROMPT},
                 {"role": "user",   "content": prompt},
             ]
-            prompts.append(tokenizer.apply_chat_template(
+            formatted = tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True,
-            ))
-
-        outputs = llm.generate(prompts, sampling_params)
-
-        scores: dict[int, dict] = {}
-        for idx, (output, conv, ref, pred) in enumerate(
-            zip(outputs, conversations, references, predictions)
-        ):
-            text = output.outputs[0].text
+            )
+            text = _generate_judge_response(model, tokenizer, formatted)
             score = _parse_result_score(text)
             scores[idx] = {
                 "conversation": conv,
@@ -335,7 +347,8 @@ def run_large_model_absolute_jury(
             base_name=base_name,
         )
 
-    del llm
+    del model
+    gc.collect()
     torch.cuda.empty_cache()
     print(f"[{judge_type}] absolute jury complete.")
 
@@ -350,19 +363,19 @@ def run_large_model_relative_jury(
     output_dir: pathlib.Path,
     judge_type: str,
 ) -> None:
-    """Pairwise relative scoring using a large model loaded in-process via vLLM."""
-    from vllm import SamplingParams
+    """Pairwise relative scoring using a large model loaded with NF4 bitsandbytes quantization."""
     import utils.prometheus as vendor_prometheus
     from utils import constants as vendor_constants
-    from prometheus_eval.prompts import RELATIVE_PROMPT, SCORE_RUBRIC_TEMPLATE, REL_SYSTEM_PROMPT
+    from prometheus_eval.prompts import RELATIVE_PROMPT, REL_SYSTEM_PROMPT
 
     model_path = LARGE_JUDGE_MODEL_PATHS[judge_type]
-    sampling_params = SamplingParams(temperature=0.0, max_tokens=1024)
 
-    llm, tokenizer = _load_large_judge(model_path)
+    model, tokenizer = _load_large_judge(model_path)
 
-    prompts = []
-    for conv, ref, pred_a, pred_b in zip(conversations, references, predictions_a, predictions_b):
+    preferences: dict[int, dict] = {}
+    for idx, (conv, ref, pred_a, pred_b) in enumerate(
+        zip(conversations, references, predictions_a, predictions_b)
+    ):
         instruction = vendor_constants.prometheus_preference_instruction.format(
             conversation=conv, ground_truth_note=ref,
         )
@@ -377,17 +390,10 @@ def run_large_model_relative_jury(
             {"role": "system", "content": REL_SYSTEM_PROMPT},
             {"role": "user",   "content": prompt},
         ]
-        prompts.append(tokenizer.apply_chat_template(
+        formatted = tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True,
-        ))
-
-    outputs = llm.generate(prompts, sampling_params)
-
-    preferences: dict[int, dict] = {}
-    for idx, (output, conv, ref, pred_a, pred_b) in enumerate(
-        zip(outputs, conversations, references, predictions_a, predictions_b)
-    ):
-        text = output.outputs[0].text
+        )
+        text = _generate_judge_response(model, tokenizer, formatted)
         pref = _parse_relative_result(text)
         preferences[idx] = {
             "conversation": conv,
@@ -406,7 +412,8 @@ def run_large_model_relative_jury(
         model_B_name=run_name_b,
         path=str(output_dir),
     )
-    del llm
+    del model
+    gc.collect()
     torch.cuda.empty_cache()
     print(f"[{judge_type}] relative jury complete.")
 
