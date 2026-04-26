@@ -16,7 +16,7 @@
 #SBATCH --gres=gpu:l40s:1
 #SBATCH --mem=40G
 #SBATCH --cpus-per-task=16
-#SBATCH --time=8:00:00
+#SBATCH --time=4:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=matthew.li@queensu.ca
 

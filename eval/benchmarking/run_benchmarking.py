@@ -9,8 +9,8 @@ runs inference on the 40-example ACI-bench test set, then computes:
 
 Supported judges (--judge):
   prometheus   Prometheus 7B v2.0, in-process vLLM (default)
-  gemma4_26b   gemma-4-26B-A4B-it, in-process vLLM (requires 2 GPUs)
-  qwen35_27b   Qwen3.5-27B, in-process vLLM (requires 2 GPUs)
+  gemma3_27b   gemma-3-27b-it, in-process (requires 2 GPUs)
+  qwen25_32b   Qwen2.5-32B-Instruct, in-process vLLM (requires 2 GPUs)
 
 After running all three judges, use compute_majority_vote.py to aggregate.
 
@@ -60,8 +60,8 @@ DEFAULT_DATA_PATH = (
 DEFAULT_RESULTS_DIR = SCRIPT_DIR / "results"
 
 LARGE_JUDGE_MODEL_PATHS = {
-    "gemma4_26b": "/model-weights/gemma-4-26B-A4B-it",
-    "qwen35_27b": "/model-weights/Qwen3.5-27B",
+    "gemma3_27b": "/model-weights/gemma-3-27b-it",
+    "qwen25_32b": "/model-weights/Qwen2.5-32B-Instruct",
 }
 
 DIAL2NOTE_SYSTEM_PROMPT = (
@@ -89,13 +89,13 @@ def parse_args() -> argparse.Namespace:
                    help="Explicit path for second model (overrides --run-name-b lookup)")
     p.add_argument(
         "--judge",
-        choices=["prometheus", "gemma4_26b", "qwen35_27b"],
+        choices=["prometheus", "gemma3_27b", "qwen25_32b"],
         default="prometheus",
         help=(
             "LLM judge backend. "
             "'prometheus' = Prometheus 7B v2.0, in-process vLLM (default). "
-            "'gemma4_26b' = gemma-4-26B-A4B-it, in-process vLLM (requires 2 GPUs). "
-            "'qwen35_27b' = Qwen3.5-27B, in-process vLLM (requires 2 GPUs). "
+            "'gemma3_27b' = gemma-3-27b-it, in-process (requires 2 GPUs). "
+            "'qwen25_32b' = Qwen2.5-32B-Instruct, in-process vLLM (requires 2 GPUs). "
             "Run all three, then use compute_majority_vote.py for aggregation."
         ),
     )
@@ -237,8 +237,17 @@ def compute_auto_metrics(
 # ── LLM jury ─────────────────────────────────────────────────────────────────
 
 def _parse_result_score(text: str) -> int:
-    """Extract integer 1–5 from '[RESULT] X' pattern. Returns -1 on failure."""
+    """Extract integer 1–5 from judge output. Returns -1 on failure.
+
+    Handles formats:
+      [RESULT] 3        (prometheus / qwen25_32b)
+      [3]               (gemma3_27b uses bare bracketed digit)
+    """
     m = re.search(r'\[RESULT\]\s*([1-5])', text)
+    if m:
+        return int(m.group(1))
+    # Bare bracketed digit: [3]
+    m = re.search(r'\[([1-5])\]', text)
     if m:
         return int(m.group(1))
     # Fallback: trailing digit at end of response

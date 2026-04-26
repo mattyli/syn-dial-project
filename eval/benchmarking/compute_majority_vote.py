@@ -1,8 +1,8 @@
 """
 Majority-vote aggregation over per-judge absolute scoring CSVs.
 
-After running run_benchmarking.py with --judge prometheus, --judge gemma4_26b,
-and --judge qwen35_27b for the same run, this script reads the per-aspect CSVs
+After running run_benchmarking.py with --judge prometheus, --judge gemma3_27b,
+and --judge qwen25_32b for the same run, this script reads the per-aspect CSVs
 from each judge and produces a majority-voted aggregated CSV per aspect.
 
 Voting rule:
@@ -32,8 +32,8 @@ import pandas as pd
 
 JUDGE_BASE_NAMES = [
     "Absolute_prometheus_scores",
-    "Absolute_gemma4_26b_scores",
-    "Absolute_qwen35_27b_scores",
+    "Absolute_gemma3_27b_scores",
+    "Absolute_qwen25_32b_scores",
 ]
 
 ASPECTS = [

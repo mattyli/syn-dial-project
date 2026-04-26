@@ -60,9 +60,12 @@ bash run_benchmarking.sh --run_name <job_name>
 #          eval/benchmarking/results/<job_name>/predictions.jsonl
 #          eval/benchmarking/results/<job_name>/<aspect>_Absolute_prometheus_scores_*.csv
 
-# Pairwise LLM judge comparison between two runs:
+# LLM judge options: prometheus (default), gemma3_27b, qwen25_32b
+# Run all three judges then aggregate with compute_majority_vote.py
 bash run_benchmarking.sh --run_name <run_a> --run_name_b <run_b> --judge prometheus
 # Other flags: --skip_auto (skip traditional metrics), --skip_llm (skip LLM judge)
+# Slurm resources: 1× L40S GPU, 40 GB RAM (judges use NF4 quantization to fit on one chip)
+# Judge models: prometheus-7b-v2.0, /model-weights/gemma-3-27b-it, /model-weights/Qwen2.5-32B-Instruct
 ```
 
 **Direct AR inference (via vec-inf + Slurm):**
@@ -179,7 +182,7 @@ ACI-bench test1  →  [autoregressive_models/run_downstream.py + vec-inf]  →  
 - `finetune.py`: QLoRA via `unsloth` (`FastLanguageModel`), LoRA r=16 on all attention+MLP projections, bf16, batch=2, grad_accum=4, lr=2e-4. Model and tokenizer are loaded first so `tokenizer.apply_chat_template()` can be used when formatting the training dataset. Default base model in code: `unsloth/Meta-Llama-3.1-8B-Instruct`; actual experiments use local `/model-weights/` paths and 3 epochs.
 - `utils/dataset.py`: Loads CSV (`Note`/`Dialogue` columns) or JSONL (`prompt`/`completion`). Accepts an optional `tokenizer` arg — when provided, uses `tokenizer.apply_chat_template()` for model-specific chat formatting; falls back to a hardcoded Llama-3 format when `tokenizer=None`.
 - `utils/constants.py`: LoRA config, system prompt (SOAP format), training hyperparameters.
-- `benchmarking/run_benchmarking.py`: Loads adapter, runs inference on ACI-bench test1. Handles Gemma3's `Processor` (requires typed content `[{"type": "text", "text": "..."}]`) vs plain `Tokenizer` (accepts string). Prometheus VLLM judge uses `tensor_parallel_size=torch.cuda.device_count()` to use all available GPUs.
+- `benchmarking/run_benchmarking.py`: Loads adapter, runs inference on ACI-bench test1. Handles Gemma3's `Processor` (requires typed content `[{"type": "text", "text": "..."}]`) vs plain `Tokenizer` (accepts string). Large LLM judges (`gemma3_27b` = `/model-weights/gemma-3-27b-it`, `qwen25_32b` = `/model-weights/Qwen2.5-32B-Instruct`) are loaded via `AutoModelForCausalLM` with NF4 bitsandbytes quantization (`load_in_4bit=True`, `bnb_4bit_quant_type="nf4"`, `bnb_4bit_use_double_quant=True`, `bnb_4bit_compute_dtype=torch.bfloat16`) and `use_fast=False` tokenizer (Gemma tokenizer quirk) so each judge fits on a single L40S GPU. Inference uses greedy decoding (`do_sample=False`) one example at a time rather than batched vLLM generation.
 
 **`prismatic-synthesis/`** — Diversity selection.
 - `select_diverse_subset.py`: Loads precomputed 1024-D gradient vectors (from Qwen3-0.6B), runs K-means (cosine similarity, 20 Lloyd iterations), weights samples by inverse cluster size, samples N examples without replacement.

@@ -7,9 +7,9 @@
 # Options:
 #   --run_name NAME     eval/results/<NAME>/model/final_model/ (required)
 #   --run_name_b NAME   second run for pairwise relative jury
-#   --judge TYPE        prometheus | gemma4_26b | qwen35_27b (default: prometheus)
-#                       gemma4_26b = gemma-4-26B-A4B-it via vec-inf
-#                       qwen35_27b = Qwen3.5-27B via vec-inf
+#   --judge TYPE        prometheus | gemma3_27b | qwen25_32b (default: prometheus)
+#                       gemma3_27b = gemma-3-27b-it
+#                       qwen25_32b = Qwen2.5-32B-Instruct
 #                       Run all three, then use compute_majority_vote.py to aggregate
 #   --skip_auto         skip traditional metrics
 #   --skip_llm          skip LLM jury
@@ -52,14 +52,15 @@ fi
 RESULTS_DIR="$SCRIPT_DIR/results/$RUN_NAME"
 mkdir -p "$RESULTS_DIR"
 
-echo "Submitting benchmarking job: $RUN_NAME"
+JUDGE_LABEL="${JUDGE:-prometheus}"
+
+echo "Submitting benchmarking job: $RUN_NAME (judge: $JUDGE_LABEL)"
 echo "  Results dir : $RESULTS_DIR"
 [[ -n "$RUN_NAME_B" ]] && echo "  Compare to  : $RUN_NAME_B"
-[[ -n "$JUDGE"      ]] && echo "  Judge       : $JUDGE"
 
 sbatch \
-    --job-name="bench-$RUN_NAME" \
-    --output="$RESULTS_DIR/slurm.out" \
-    --error="$RESULTS_DIR/slurm.err" \
+    --job-name="bench-$RUN_NAME-$JUDGE_LABEL" \
+    --output="$RESULTS_DIR/slurm_${JUDGE_LABEL}.out" \
+    --error="$RESULTS_DIR/slurm_${JUDGE_LABEL}.err" \
     --export="ALL,RUN_NAME=$RUN_NAME,RUN_NAME_B=$RUN_NAME_B,JUDGE=$JUDGE,SKIP_AUTO=$SKIP_AUTO,SKIP_LLM=$SKIP_LLM" \
     "$SCRIPT_DIR/run_benchmarking.sbatch"
