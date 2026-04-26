@@ -70,7 +70,8 @@
       "Bash(scancel 3279601 *)",
       "Bash(xargs ls *)",
       "Bash(xargs -I{} ls /project/6101844/mattli/syn-dial-project/eval/benchmarking/results/{}/)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(xargs -I {} basename \"{}\")"
     ]
   }
 }
