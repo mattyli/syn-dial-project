@@ -100,7 +100,11 @@ def compute_majority_vote(run_name: str, results_dir: pathlib.Path) -> None:
                 raw = df.iloc[idx]["Score"]
                 try:
                     score = int(raw)
+                    if score not in range(1, 6):  # valid scores are 1–5
+                        print(f"  [WARN] out-of-range score {score} from {base_name} row {idx} — treating as invalid")
+                        score = -1
                 except (ValueError, TypeError):
+                    print(f"  [WARN] unparseable score {raw!r} from {base_name} row {idx} — treating as invalid")
                     score = -1
                 per_judge.append(score)
                 judge_score_cols[base_name].append(score)
